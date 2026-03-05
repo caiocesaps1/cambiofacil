@@ -1,0 +1,33 @@
+services:
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      RATE_CACHE_TTL: 900
+      LOG_LEVEL: info
+    depends_on:
+      - redis
+    ports:
+      - "8000:8000"   # exposto para testes locais; pode remover em prod
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ""   # vazio = usa o proxy nginx (/api)
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  redis_data:
