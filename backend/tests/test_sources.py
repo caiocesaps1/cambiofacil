@@ -7,14 +7,14 @@ from app.services.sources.confidence import ConfidenceSource
 
 
 # ---------------------------------------------------------------------------
-# Wise
+# Wise  (endpoint: wise.com/rates/live → {"source":"BRL","target":"USD","value":0.1911})
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_wise_usd_success():
     mock_response = MagicMock()
     mock_response.raise_for_status = MagicMock()
-    mock_response.json.return_value = [{"rate": 0.1718}]  # 1 BRL = 0.1718 USD → 1 USD = ~5.82 BRL
+    mock_response.json.return_value = {"source": "BRL", "target": "USD", "value": 0.1911, "time": 1234567890}
 
     with patch("httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
@@ -29,7 +29,7 @@ async def test_wise_usd_success():
     assert rate is not None
     assert rate.institution == "Wise"
     assert rate.currency == Currency.USD
-    assert rate.buy_rate == round(1 / 0.1718, 4)
+    assert rate.buy_rate == round(1 / 0.1911, 4)
     assert rate.spread_pct >= 0
 
 
@@ -49,10 +49,10 @@ async def test_wise_returns_none_on_error():
 
 
 @pytest.mark.asyncio
-async def test_wise_returns_none_on_empty_response():
+async def test_wise_returns_none_on_zero_value():
     mock_response = MagicMock()
     mock_response.raise_for_status = MagicMock()
-    mock_response.json.return_value = []
+    mock_response.json.return_value = {"source": "BRL", "target": "USD", "value": 0, "time": 1234567890}
 
     with patch("httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
@@ -68,17 +68,18 @@ async def test_wise_returns_none_on_empty_response():
 
 
 # ---------------------------------------------------------------------------
-# Nomad
+# Nomad  (endpoint: api.benomad.us/forex-rates-s3/v1/calculator → {"rate":{"value":"5.23",...}})
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_nomad_usd_success():
     mock_response = MagicMock()
     mock_response.raise_for_status = MagicMock()
-    mock_response.json.return_value = [
-        {"currency": "USD", "buy": "5.85", "sell": "5.75"},
-        {"currency": "EUR", "buy": "6.30", "sell": "6.20"},
-    ]
+    mock_response.json.return_value = {
+        "rate": {"value": "5.2336", "timestamp": "2026-03-05T00:50:00.904Z"},
+        "iof": {"banking": "0.035"},
+        "spread": {"default": "0.02", "custom": "0.01"},
+    }
 
     with patch("httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
@@ -93,15 +94,19 @@ async def test_nomad_usd_success():
     assert rate is not None
     assert rate.institution == "Nomad"
     assert rate.currency == Currency.USD
-    assert rate.buy_rate == 5.85
-    assert rate.sell_rate == 5.75
+    assert rate.buy_rate == 5.2336
 
 
 @pytest.mark.asyncio
-async def test_nomad_returns_none_when_currency_not_found():
+async def test_nomad_eur_success():
     mock_response = MagicMock()
     mock_response.raise_for_status = MagicMock()
-    mock_response.json.return_value = [{"currency": "EUR", "buy": "6.30", "sell": "6.20"}]
+    mock_response.json.return_value = {
+        "history": [
+            {"date": "2026-03-05T00:48:51.774Z", "rates": {"exchange": 6.1013}},
+            {"date": "2026-03-04T23:38:37.383Z", "rates": {"exchange": 6.093}},
+        ]
+    }
 
     with patch("httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
@@ -111,9 +116,11 @@ async def test_nomad_returns_none_when_currency_not_found():
         mock_client_cls.return_value = mock_client
 
         source = NomadSource()
-        rate = await source.fetch(Currency.USD)
+        rate = await source.fetch(Currency.EUR)
 
-    assert rate is None
+    assert rate is not None
+    assert rate.currency == Currency.EUR
+    assert rate.buy_rate == 6.1013
 
 
 @pytest.mark.asyncio
@@ -132,33 +139,41 @@ async def test_nomad_returns_none_on_error():
 
 
 # ---------------------------------------------------------------------------
-# Confidence
+# BCB PTAX  (endpoint: olinda.bcb.gov.br PTAX → {"value":[{"cotacaoCompra":5.20,"cotacaoVenda":5.21,...}]})
 # ---------------------------------------------------------------------------
 
-CONFIDENCE_HTML_USD = """
-<html><body>
-  <div data-currency="dolar">
-    <span data-type="buy">5,92</span>
-    <span data-type="sell">5,80</span>
-  </div>
-</body></html>
-"""
+BCB_RESPONSE_USD = {
+    "value": [
+        {
+            "paridadeCompra": 1.0,
+            "paridadeVenda": 1.0,
+            "cotacaoCompra": 5.2085,
+            "cotacaoVenda": 5.2091,
+            "dataHoraCotacao": "2026-03-04 13:07:27.146",
+            "tipoBoletim": "Fechamento PTAX",
+        }
+    ]
+}
 
-CONFIDENCE_HTML_EUR = """
-<html><body>
-  <div data-currency="euro">
-    <span data-type="buy">6,40</span>
-    <span data-type="sell">6,28</span>
-  </div>
-</body></html>
-"""
+BCB_RESPONSE_EUR = {
+    "value": [
+        {
+            "paridadeCompra": 1.0,
+            "paridadeVenda": 1.0,
+            "cotacaoCompra": 6.0630,
+            "cotacaoVenda": 6.0639,
+            "dataHoraCotacao": "2026-03-04 13:07:27.146",
+            "tipoBoletim": "Fechamento PTAX",
+        }
+    ]
+}
 
 
 @pytest.mark.asyncio
-async def test_confidence_usd_success():
+async def test_bcb_ptax_usd_success():
     mock_response = MagicMock()
     mock_response.raise_for_status = MagicMock()
-    mock_response.text = CONFIDENCE_HTML_USD
+    mock_response.json.return_value = BCB_RESPONSE_USD
 
     with patch("httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
@@ -171,17 +186,17 @@ async def test_confidence_usd_success():
         rate = await source.fetch(Currency.USD)
 
     assert rate is not None
-    assert rate.institution == "Confidence"
+    assert rate.institution == "BCB PTAX (Turismo)"
     assert rate.currency == Currency.USD
-    assert rate.buy_rate == 5.92
-    assert rate.sell_rate == 5.80
+    assert rate.buy_rate == 5.2091
+    assert rate.sell_rate == 5.2085
 
 
 @pytest.mark.asyncio
-async def test_confidence_eur_success():
+async def test_bcb_ptax_eur_success():
     mock_response = MagicMock()
     mock_response.raise_for_status = MagicMock()
-    mock_response.text = CONFIDENCE_HTML_EUR
+    mock_response.json.return_value = BCB_RESPONSE_EUR
 
     with patch("httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
@@ -194,12 +209,12 @@ async def test_confidence_eur_success():
         rate = await source.fetch(Currency.EUR)
 
     assert rate is not None
-    assert rate.buy_rate == 6.40
-    assert rate.sell_rate == 6.28
+    assert rate.buy_rate == 6.0639
+    assert rate.sell_rate == 6.0630
 
 
 @pytest.mark.asyncio
-async def test_confidence_returns_none_on_error():
+async def test_bcb_ptax_returns_none_on_error():
     with patch("httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
