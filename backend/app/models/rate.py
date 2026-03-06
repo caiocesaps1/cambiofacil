@@ -6,6 +6,7 @@ from datetime import datetime
 class Currency(str, Enum):
     USD = "USD"
     EUR = "EUR"
+    USDC = "USDC"
 
 
 class InstitutionType(str, Enum):

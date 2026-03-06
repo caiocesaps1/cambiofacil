@@ -4,6 +4,9 @@ from app.models.rate import Currency
 from app.services.sources.wise import WiseSource
 from app.services.sources.nomad import NomadSource
 from app.services.sources.confidence import ConfidenceSource
+from app.services.sources.binance import BinanceSource
+from app.services.sources.mercadobitcoin import MercadoBitcoinSource
+from app.services.sources.coingecko import CoinGeckoSource
 
 
 # ---------------------------------------------------------------------------
@@ -224,5 +227,169 @@ async def test_bcb_ptax_returns_none_on_error():
 
         source = ConfidenceSource()
         rate = await source.fetch(Currency.USD)
+
+    assert rate is None
+
+
+# ---------------------------------------------------------------------------
+# Binance  (endpoint: api.binance.com/api/v3/ticker/bookTicker?symbol=USDCBRL)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_binance_usdc_success():
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {
+        "symbol": "USDCBRL",
+        "bidPrice": "5.26590000",
+        "askPrice": "5.26660000",
+        "bidQty": "100.00000000",
+        "askQty": "100.00000000",
+    }
+
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.get = AsyncMock(return_value=mock_response)
+        mock_client_cls.return_value = mock_client
+
+        source = BinanceSource()
+        rate = await source.fetch(Currency.USDC)
+
+    assert rate is not None
+    assert rate.institution == "Binance"
+    assert rate.currency == Currency.USDC
+    assert rate.buy_rate == 5.2666
+    assert rate.sell_rate == 5.2659
+
+
+@pytest.mark.asyncio
+async def test_binance_skips_non_usdc():
+    source = BinanceSource()
+    rate = await source.fetch(Currency.USD)
+    assert rate is None
+
+
+@pytest.mark.asyncio
+async def test_binance_returns_none_on_error():
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.get = AsyncMock(side_effect=Exception("timeout"))
+        mock_client_cls.return_value = mock_client
+
+        source = BinanceSource()
+        rate = await source.fetch(Currency.USDC)
+
+    assert rate is None
+
+
+# ---------------------------------------------------------------------------
+# Mercado Bitcoin  (endpoint: mercadobitcoin.net/api/USDC/ticker/)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_mercadobitcoin_usdc_success():
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {
+        "ticker": {
+            "high": "5.30000000",
+            "low": "5.20000000",
+            "vol": "12345.00000000",
+            "last": "5.26430000",
+            "buy": "5.26380000",
+            "sell": "5.26680000",
+            "open": "5.25000000",
+            "date": 1709900000,
+        }
+    }
+
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.get = AsyncMock(return_value=mock_response)
+        mock_client_cls.return_value = mock_client
+
+        source = MercadoBitcoinSource()
+        rate = await source.fetch(Currency.USDC)
+
+    assert rate is not None
+    assert rate.institution == "Mercado Bitcoin"
+    assert rate.currency == Currency.USDC
+    assert rate.buy_rate == 5.2638
+    assert rate.sell_rate == 5.2668
+
+
+@pytest.mark.asyncio
+async def test_mercadobitcoin_skips_non_usdc():
+    source = MercadoBitcoinSource()
+    rate = await source.fetch(Currency.EUR)
+    assert rate is None
+
+
+@pytest.mark.asyncio
+async def test_mercadobitcoin_returns_none_on_error():
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.get = AsyncMock(side_effect=Exception("connection error"))
+        mock_client_cls.return_value = mock_client
+
+        source = MercadoBitcoinSource()
+        rate = await source.fetch(Currency.USDC)
+
+    assert rate is None
+
+
+# ---------------------------------------------------------------------------
+# CoinGecko  (endpoint: api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=brl)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_coingecko_usdc_success():
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {"usd-coin": {"brl": 5.24}}
+
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.get = AsyncMock(return_value=mock_response)
+        mock_client_cls.return_value = mock_client
+
+        source = CoinGeckoSource()
+        rate = await source.fetch(Currency.USDC)
+
+    assert rate is not None
+    assert rate.institution == "CoinGecko"
+    assert rate.currency == Currency.USDC
+    assert rate.buy_rate == 5.24
+    assert rate.spread_pct >= 0
+
+
+@pytest.mark.asyncio
+async def test_coingecko_skips_non_usdc():
+    source = CoinGeckoSource()
+    rate = await source.fetch(Currency.USD)
+    assert rate is None
+
+
+@pytest.mark.asyncio
+async def test_coingecko_returns_none_on_error():
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.get = AsyncMock(side_effect=Exception("timeout"))
+        mock_client_cls.return_value = mock_client
+
+        source = CoinGeckoSource()
+        rate = await source.fetch(Currency.USDC)
 
     assert rate is None

@@ -8,6 +8,7 @@ interface Props {
 const options: { value: Currency; label: string; flag: string }[] = [
   { value: 'USD', label: 'Dólar Americano', flag: '🇺🇸' },
   { value: 'EUR', label: 'Euro', flag: '🇪🇺' },
+  { value: 'USDC', label: 'USD Coin', flag: '💵' },
 ]
 
 export function CurrencySelector({ value, onChange }: Props) {

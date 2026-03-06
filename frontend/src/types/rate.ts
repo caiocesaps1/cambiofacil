@@ -1,4 +1,4 @@
-export type Currency = 'USD' | 'EUR'
+export type Currency = 'USD' | 'EUR' | 'USDC'
 export type InstitutionType = 'bank' | 'fintech' | 'broker' | 'exchange_house'
 
 export interface Rate {

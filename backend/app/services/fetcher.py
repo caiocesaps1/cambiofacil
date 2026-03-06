@@ -7,6 +7,9 @@ from app.services.sources.awesomeapi import AwesomeAPISource
 from app.services.sources.wise import WiseSource
 from app.services.sources.nomad import NomadSource
 from app.services.sources.confidence import ConfidenceSource
+from app.services.sources.binance import BinanceSource
+from app.services.sources.mercadobitcoin import MercadoBitcoinSource
+from app.services.sources.coingecko import CoinGeckoSource
 from app.config import settings
 
 SOURCES = [
@@ -14,6 +17,9 @@ SOURCES = [
     WiseSource(),
     NomadSource(),
     ConfidenceSource(),
+    BinanceSource(),
+    MercadoBitcoinSource(),
+    CoinGeckoSource(),
 ]
 
 
