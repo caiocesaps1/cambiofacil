@@ -5,6 +5,7 @@ interface Props {
   rate: Rate
   isBest: boolean
   currency: string
+  savingsVsWorst?: number
 }
 
 const typeLabel: Record<string, string> = {
@@ -14,7 +15,7 @@ const typeLabel: Record<string, string> = {
   exchange_house: 'Casa de câmbio',
 }
 
-export function RateCard({ rate, isBest, currency }: Props) {
+export function RateCard({ rate, isBest, currency, savingsVsWorst }: Props) {
   return (
     <div
       className={`relative flex items-center justify-between p-4 rounded-xl border transition-all ${
@@ -39,6 +40,11 @@ export function RateCard({ rate, isBest, currency }: Props) {
         <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Compra R$ {rate.buy_rate.toFixed(4)} · Spread {rate.spread_pct}%
         </div>
+        {savingsVsWorst != null && savingsVsWorst > 0 && (
+          <div className="mt-1 text-xs font-semibold text-green-600 dark:text-green-400">
+            +{savingsVsWorst.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency} a mais que a pior opção
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-4">

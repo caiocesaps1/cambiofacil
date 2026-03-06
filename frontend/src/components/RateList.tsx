@@ -15,10 +15,18 @@ export function RateList({ rates, currency }: Props) {
     )
   }
 
+  const worstAmount = rates[rates.length - 1].amount_received
+
   return (
     <div className="space-y-3">
       {rates.map((rate, i) => (
-        <RateCard key={rate.institution} rate={rate} isBest={i === 0} currency={currency} />
+        <RateCard
+          key={rate.institution}
+          rate={rate}
+          isBest={i === 0}
+          currency={currency}
+          savingsVsWorst={i === 0 ? rate.amount_received - worstAmount : undefined}
+        />
       ))}
     </div>
   )
