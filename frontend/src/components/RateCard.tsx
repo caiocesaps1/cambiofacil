@@ -5,6 +5,8 @@ interface Props {
   rate: Rate
   isBest: boolean
   currency: string
+  mode: 'normal' | 'reverse'
+  brlCost?: number
   savingsVsWorst?: number
 }
 
@@ -15,7 +17,9 @@ const typeLabel: Record<string, string> = {
   exchange_house: 'Casa de câmbio',
 }
 
-export function RateCard({ rate, isBest, currency, savingsVsWorst }: Props) {
+export function RateCard({ rate, isBest, currency, mode, brlCost, savingsVsWorst }: Props) {
+  const isReverse = mode === 'reverse'
+
   return (
     <div
       className={`relative flex items-center justify-between p-4 rounded-xl border transition-all ${
@@ -40,19 +44,32 @@ export function RateCard({ rate, isBest, currency, savingsVsWorst }: Props) {
         <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Compra R$ {rate.buy_rate.toFixed(4)} · Spread {rate.spread_pct}%
         </div>
-        {savingsVsWorst != null && savingsVsWorst > 0 && (
+        {savingsVsWorst != null && savingsVsWorst > 0.01 && (
           <div className="mt-1 text-xs font-semibold text-green-600 dark:text-green-400">
-            +{savingsVsWorst.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency} a mais que a pior opção
+            {isReverse
+              ? `Economiza R$ ${savingsVsWorst.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} vs pior opção`
+              : `+${savingsVsWorst.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency} a mais que a pior opção`}
           </div>
         )}
       </div>
 
       <div className="flex items-center gap-4">
         <div className="text-right">
-          <div className={`text-xl font-bold ${isBest ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
-            {rate.amount_received.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </div>
-          <div className="text-xs text-gray-400 dark:text-gray-500">{currency} recebidos</div>
+          {isReverse && brlCost != null ? (
+            <>
+              <div className={`text-xl font-bold ${isBest ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+                R$ {brlCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="text-xs text-gray-400 dark:text-gray-500">a pagar em BRL</div>
+            </>
+          ) : (
+            <>
+              <div className={`text-xl font-bold ${isBest ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+                {rate.amount_received.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+              <div className="text-xs text-gray-400 dark:text-gray-500">{currency} recebidos</div>
+            </>
+          )}
         </div>
 
         <a

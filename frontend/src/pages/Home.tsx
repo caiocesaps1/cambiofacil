@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Moon, Sun } from 'lucide-react'
+import { Moon, Sun, ArrowLeftRight } from 'lucide-react'
 import { CurrencySelector } from '@/components/CurrencySelector'
-import { AmountInput } from '@/components/AmountInput'
+import { AmountInput, foreignPresets } from '@/components/AmountInput'
 import { FilterBar } from '@/components/FilterBar'
 import { RateList } from '@/components/RateList'
 import { RateListSkeleton } from '@/components/RateCardSkeleton'
@@ -10,13 +10,21 @@ import { useRates } from '@/hooks/useRates'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import type { Currency, InstitutionType } from '@/types/rate'
 
+type Mode = 'normal' | 'reverse'
+
 export function Home() {
   const [currency, setCurrency] = useState<Currency>('USD')
   const [amount, setAmount] = useState(1000)
+  const [foreignAmount, setForeignAmount] = useState(500)
+  const [mode, setMode] = useState<Mode>('normal')
   const [typeFilter, setTypeFilter] = useState<InstitutionType | undefined>(undefined)
   const { isDark, toggle } = useDarkMode()
 
-  const { data, isLoading, isError, error, isRefetching } = useRates(currency, amount, typeFilter)
+  // Em modo reverso, buscamos com um valor BRL fixo grande para obter as taxas
+  const apiAmount = mode === 'normal' ? amount : 10000
+  const { data, isLoading, isError, error, isRefetching } = useRates(currency, apiAmount, typeFilter)
+
+  const currencySymbol = currency === 'USDC' ? 'USDC' : currency === 'EUR' ? '€' : '$'
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
@@ -41,7 +49,43 @@ export function Home() {
         {/* Controles */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-5 space-y-4">
           <CurrencySelector value={currency} onChange={setCurrency} />
-          <AmountInput value={amount} onChange={setAmount} />
+
+          {/* Toggle de modo */}
+          <div className="flex rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden text-sm font-semibold">
+            <button
+              onClick={() => setMode('normal')}
+              className={`flex-1 py-2 transition-colors ${
+                mode === 'normal'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700'
+              }`}
+            >
+              Tenho BRL → recebo {currency}
+            </button>
+            <button
+              onClick={() => setMode('reverse')}
+              className={`flex-1 py-2 flex items-center justify-center gap-1.5 transition-colors ${
+                mode === 'reverse'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700'
+              }`}
+            >
+              <ArrowLeftRight size={14} />
+              Quero {currency} → pago BRL
+            </button>
+          </div>
+
+          {mode === 'normal' ? (
+            <AmountInput value={amount} onChange={setAmount} />
+          ) : (
+            <AmountInput
+              value={foreignAmount}
+              onChange={setForeignAmount}
+              label={`Quantidade de ${currency} desejada`}
+              prefix={currencySymbol}
+              presets={foreignPresets}
+            />
+          )}
         </div>
 
         {/* Filtro */}
@@ -64,7 +108,12 @@ export function Home() {
               </span>
               <LastUpdated fetchedAt={data.fetched_at} isRefetching={isRefetching} />
             </div>
-            <RateList rates={data.rates} currency={currency} />
+            <RateList
+              rates={data.rates}
+              currency={currency}
+              mode={mode}
+              foreignAmount={foreignAmount}
+            />
           </>
         )}
       </main>
