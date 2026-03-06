@@ -4,6 +4,7 @@ import { CurrencySelector } from '@/components/CurrencySelector'
 import { AmountInput } from '@/components/AmountInput'
 import { FilterBar } from '@/components/FilterBar'
 import { RateList } from '@/components/RateList'
+import { RateListSkeleton } from '@/components/RateCardSkeleton'
 import { LastUpdated } from '@/components/LastUpdated'
 import { useRates } from '@/hooks/useRates'
 import { useDarkMode } from '@/hooks/useDarkMode'
@@ -47,9 +48,7 @@ export function Home() {
         <FilterBar value={typeFilter} onChange={setTypeFilter} />
 
         {/* Resultados */}
-        {isLoading && (
-          <div className="text-center py-12 text-gray-400 dark:text-gray-500 animate-pulse">Buscando cotações...</div>
-        )}
+        {isLoading && <RateListSkeleton />}
 
         {isError && (
           <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl p-4 text-sm">
