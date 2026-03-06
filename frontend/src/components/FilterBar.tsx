@@ -23,7 +23,7 @@ export function FilterBar({ value, onChange }: Props) {
           className={`text-sm px-4 py-1.5 rounded-full border transition-all ${
             value === f.value
               ? 'border-blue-600 bg-blue-600 text-white font-semibold'
-              : 'border-gray-200 bg-white text-gray-600 hover:border-blue-400'
+              : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:border-blue-400'
           }`}
         >
           {f.label}

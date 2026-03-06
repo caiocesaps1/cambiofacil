@@ -20,8 +20,8 @@ export function CurrencySelector({ value, onChange }: Props) {
           onClick={() => onChange(opt.value)}
           className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 font-semibold transition-all ${
             value === opt.value
-              ? 'border-blue-600 bg-blue-50 text-blue-700'
-              : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300'
+              ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+              : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:border-blue-300'
           }`}
         >
           <span className="text-2xl">{opt.flag}</span>

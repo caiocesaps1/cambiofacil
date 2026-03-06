@@ -9,7 +9,7 @@ interface Props {
 export function RateList({ rates, currency }: Props) {
   if (rates.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-400">
+      <div className="text-center py-12 text-gray-400 dark:text-gray-500">
         Nenhuma cotação encontrada para este filtro.
       </div>
     )
