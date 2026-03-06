@@ -13,6 +13,8 @@ class ConfidenceSource(BaseSource):
     url = "https://www.bcb.gov.br/estabilidadefinanceira/fechamentodolar"
 
     async def fetch(self, currency: Currency) -> Rate | None:
+        if currency == Currency.USDC:
+            return None
         moeda = "USD" if currency == Currency.USD else "EUR"
         today = datetime.now(timezone.utc)
 

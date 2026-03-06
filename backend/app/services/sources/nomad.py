@@ -13,6 +13,8 @@ class NomadSource(BaseSource):
     url = "https://nomadglobal.com"
 
     async def fetch(self, currency: Currency) -> Rate | None:
+        if currency == Currency.USDC:
+            return None
         try:
             async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
                 if currency == Currency.USD:

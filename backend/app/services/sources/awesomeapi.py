@@ -16,6 +16,8 @@ class AwesomeAPISource(BaseSource):
     url = "https://economia.awesomeapi.com.br"
 
     async def fetch(self, currency: Currency) -> Rate | None:
+        if currency == Currency.USDC:
+            return None
         key = "USDBRL" if currency == Currency.USD else "EURBRL"
         try:
             async with httpx.AsyncClient(timeout=10) as client:
