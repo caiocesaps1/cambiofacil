@@ -12,6 +12,7 @@ from app.services.sources.mercadobitcoin import MercadoBitcoinSource
 from app.services.sources.coingecko import CoinGeckoSource
 from app.services.sources.okx import OKXSource
 from app.services.sources.foxbit import FoxbitSource
+from app.services.affiliates import apply_affiliate
 from app.config import settings
 
 SOURCES = [
@@ -87,7 +88,10 @@ async def get_rates(currency: Currency, amount_brl: float, type_filter: str | No
     if type_filter:
         rates = [r for r in rates if r.type == type_filter]
 
-    # 5. Calcular amount_received e ordenar
+    # 5. Aplicar URLs de afiliado (se configuradas)
+    rates = [r.model_copy(update={"url": apply_affiliate(r.institution, r.url)}) for r in rates]
+
+    # 6. Calcular amount_received e ordenar
     rates = _apply_amount(rates, amount_brl)
 
     return RatesResponse(
