@@ -10,6 +10,8 @@ from app.services.sources.confidence import ConfidenceSource
 from app.services.sources.binance import BinanceSource
 from app.services.sources.mercadobitcoin import MercadoBitcoinSource
 from app.services.sources.coingecko import CoinGeckoSource
+from app.services.sources.okx import OKXSource
+from app.services.sources.foxbit import FoxbitSource
 from app.config import settings
 
 SOURCES = [
@@ -20,7 +22,19 @@ SOURCES = [
     BinanceSource(),
     MercadoBitcoinSource(),
     CoinGeckoSource(),
+    OKXSource(),
+    FoxbitSource(),
 ]
+
+# Per-source status registry: source_name -> {"last_ok": datetime|None, "last_error": datetime|None, "error": str|None}
+_source_status: dict[str, dict] = {
+    s.__class__.__name__: {"last_ok": None, "last_error": None, "error": None}
+    for s in SOURCES
+}
+
+
+def get_source_status() -> dict[str, dict]:
+    return _source_status
 
 
 def _apply_amount(rates: list[Rate], amount_brl: float) -> list[Rate]:
@@ -52,6 +66,15 @@ async def get_rates(currency: Currency, amount_brl: float, type_filter: str | No
             *[source.fetch(currency) for source in SOURCES],
             return_exceptions=True,
         )
+        now = datetime.now(timezone.utc)
+        for source, result in zip(SOURCES, results):
+            name = source.__class__.__name__
+            if isinstance(result, Rate):
+                _source_status[name]["last_ok"] = now
+                _source_status[name]["error"] = None
+            elif isinstance(result, Exception):
+                _source_status[name]["last_error"] = now
+                _source_status[name]["error"] = str(result)
         rates = [r for r in results if isinstance(r, Rate)]
 
         if not rates:

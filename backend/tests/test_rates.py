@@ -8,7 +8,10 @@ client = TestClient(app)
 def test_health():
     res = client.get("/health")
     assert res.status_code == 200
-    assert res.json() == {"status": "ok"}
+    data = res.json()
+    assert data["status"] in ("ok", "degraded", "unknown")
+    assert data["cache"] in ("redis", "memory")
+    assert "sources" in data
 
 
 def test_get_rates_usd():
