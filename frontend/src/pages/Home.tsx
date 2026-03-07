@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Moon, Sun, ArrowLeftRight } from 'lucide-react'
+import { Moon, Sun, ArrowLeftRight, Share2, Check } from 'lucide-react'
 import { CurrencySelector } from '@/components/CurrencySelector'
 import { AmountInput, foreignPresets } from '@/components/AmountInput'
 import { FilterBar } from '@/components/FilterBar'
@@ -8,17 +8,32 @@ import { RateListSkeleton } from '@/components/RateCardSkeleton'
 import { LastUpdated } from '@/components/LastUpdated'
 import { useRates } from '@/hooks/useRates'
 import { useDarkMode } from '@/hooks/useDarkMode'
+import { useUrlState, useUrlNumber } from '@/hooks/useUrlState'
 import type { Currency, InstitutionType } from '@/types/rate'
 
 type Mode = 'normal' | 'reverse'
 
+const CURRENCIES: Currency[] = ['USD', 'EUR', 'USDC']
+const MODES: Mode[] = ['normal', 'reverse']
+const TYPES: InstitutionType[] = ['bank', 'fintech', 'broker', 'exchange_house']
+
 export function Home() {
-  const [currency, setCurrency] = useState<Currency>('USD')
-  const [amount, setAmount] = useState(1000)
-  const [foreignAmount, setForeignAmount] = useState(500)
-  const [mode, setMode] = useState<Mode>('normal')
-  const [typeFilter, setTypeFilter] = useState<InstitutionType | undefined>(undefined)
+  const [currency, setCurrency] = useUrlState<Currency>('c', 'USD', CURRENCIES)
+  const [amount, setAmount] = useUrlNumber('a', 1000)
+  const [foreignAmount, setForeignAmount] = useUrlNumber('fa', 500)
+  const [mode, setMode] = useUrlState<Mode>('m', 'normal', MODES)
+  const [rawTypeFilter, setRawTypeFilter] = useUrlState<InstitutionType | ''>('t', '', TYPES as unknown as (InstitutionType | '')[])
+  const typeFilter = rawTypeFilter === '' ? undefined : rawTypeFilter as InstitutionType
+  const setTypeFilter = (v: InstitutionType | undefined) => setRawTypeFilter(v ?? '')
+  const [copied, setCopied] = useState(false)
   const { isDark, toggle } = useDarkMode()
+
+  function handleShare() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   // Em modo reverso, buscamos com um valor BRL fixo grande para obter as taxas
   const apiAmount = mode === 'normal' ? amount : 10000
@@ -35,13 +50,22 @@ export function Home() {
             <h1 className="text-2xl font-bold tracking-tight">CâmbioFácil</h1>
             <p className="text-blue-200 text-sm mt-0.5">Compare as melhores taxas de câmbio em tempo real</p>
           </div>
-          <button
-            onClick={toggle}
-            aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
-            className="p-2 rounded-lg text-blue-200 hover:text-white hover:bg-blue-600 transition-colors"
-          >
-            {isDark ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleShare}
+              aria-label="Compartilhar cotação"
+              className="p-2 rounded-lg text-blue-200 hover:text-white hover:bg-blue-600 transition-colors"
+            >
+              {copied ? <Check size={20} /> : <Share2 size={20} />}
+            </button>
+            <button
+              onClick={toggle}
+              aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              className="p-2 rounded-lg text-blue-200 hover:text-white hover:bg-blue-600 transition-colors"
+            >
+              {isDark ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -89,7 +113,7 @@ export function Home() {
         </div>
 
         {/* Filtro */}
-        <FilterBar value={typeFilter} onChange={setTypeFilter} />
+        <FilterBar value={typeFilter} onChange={(v) => setTypeFilter(v)} />
 
         {/* Resultados */}
         {isLoading && <RateListSkeleton />}
